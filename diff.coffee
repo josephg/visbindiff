@@ -1,6 +1,22 @@
 canvas = document.getElementById('canvas')
 data = []
 
+abs = (x) -> if x > 0 then x else -x
+
+range = (arr) ->
+  min = 255
+  max = 0
+  i = 0
+  while i < arr.length
+    if arr[i] < min
+      min = arr[i]
+    if arr[i] > max
+      max = arr[i]
+    i++
+
+  min: min
+  max: max
+
 maybeDone = ->
   return unless data[0] || data[1]
   data[0] ||= data[1]
@@ -58,24 +74,6 @@ loadFrom = (num) ->
     return
 
   return
-
-range = (arr) ->
-  min = 255
-  max = 0
-  i = 0
-  while i < arr.length
-    if arr[i] < min
-      min = arr[i]
-    if arr[i] > max
-      max = arr[i]
-    i++
-  {
-    min: min
-    max: max
-  }
-
-abs = (x) ->
-  if x > 0 then x else -x
 
 loadFrom 0
 loadFrom 1
