@@ -1,0 +1,145 @@
+<style>
+.popover {
+  z-index: 10;
+  position: absolute;
+  /*top: 100px;
+  left: 100px;*/
+  background: hsla(75, 70%, 68%, 0.7);
+  padding: 5px;
+  border: 1px solid hsla(0, 0%, 0%);
+  border-radius: 4px;
+  pointer-events: none;
+  display: none;
+}
+canvas {
+  cursor: crosshair;
+}
+</style>
+<input type="file" id="f0">
+<input type="file" id="f1">
+<div>
+  <canvas id="canvas"></canvas>
+</div>
+<div class="popover" id="popover">ohhai</div>
+<script>
+
+var canvas = document.getElementById("canvas");
+
+var data = [];
+
+function range(arr) {
+  var min = 255, max = 0;
+  for (var i = 0; i < arr.length; i++) {
+    if (arr[i] < min) min = arr[i];
+    if (arr[i] > max) max = arr[i];
+  }
+  return {min:min, max:max};
+}
+
+function abs(x) { return x > 0 ? x : -x; }
+
+var maybeDone = function() {
+  if (!data[0]) data[0] = data[1];
+  if (!data[1]) data[1] = data[0];
+
+  if (data[0] && data[1]) {
+    console.log('got both');
+    var width = canvas.width = canvas.style.width = data[0].length;
+    var height = canvas.height = canvas.style.height = data[1].length;
+
+    var ctx = canvas.getContext("2d");
+    var image = ctx.createImageData(width, height);
+    if (!image) {
+      window.alert("too big!");
+      return;
+    }
+
+    console.log("scanning...");
+    var imagedata = image.data;
+    var r0 = range(data[0]), r1 = range(data[1]);
+    var mult = 255 / Math.max(abs(r0.max - r1.min), abs(r1.max - r0.min));
+    console.log("rendering...");
+
+    for (var x = 0; x < data[0].length; x++) {
+      for (var y = 0; y < data[1].length; y++) {
+        var base = (x + y * width) * 4;
+        var v = (Math.abs(data[0][x] - data[1][y]) * mult) | 0;
+        if (data[0][x] === 0 && v === 0) {
+          imagedata[base] = 0;
+          imagedata[base+1] = 255;
+          imagedata[base+2] = 0;
+        } else if (v === 0) {
+          // Red
+          imagedata[base] = 255;
+          imagedata[base+1] = 0;
+          imagedata[base+2] = 0;
+        } else {
+          // Grey
+          imagedata[base] = imagedata[base + 1] = imagedata[base + 2] = v;
+        }
+
+        imagedata[base + 3] = 255;
+      }
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+};
+
+var loadFrom = function(num) {
+  var el = document.getElementById('f' + num);
+
+  el.onchange = function() {
+    fr = new FileReader();
+
+    fr.onloadend = function() {
+      console.log("load end");
+      data[num] = new Uint8Array(fr.result);
+      maybeDone();
+    };
+
+    if (el.files.length) {
+      fr.readAsArrayBuffer(el.files[0]);
+    }
+  };
+};
+
+loadFrom(0);
+loadFrom(1);
+
+var stringNear = function(d, idx, width) {
+  width = width || 10;
+  if (!data[d]) return '';
+
+  var str = '';
+  for (var i = idx - width; i <= idx + width && i < data[d].length; i++) {
+    str += String.fromCharCode(data[d][i]);
+  }
+  return JSON.stringify(str);
+}
+
+var popoverEl = document.getElementById("popover");
+canvas.onmousemove = function(e) {
+  var x = e.offsetX, y = e.offsetY;
+  //e.offsetX, e.offsetY
+  popoverEl.style.left = x + 25;
+  popoverEl.style.top = y + 45;
+
+  if (data[0])
+    var v0 = data[0][x], s0 = stringNear(0, x);
+  if (data[1])
+    var v1 = data[1][x], s1 = stringNear(1, y);
+
+  popoverEl.innerText = "(" + x + "," + y + ") " + v0 + "('" + s0 + "') vs " + v1 + "('" + s1 + "')";
+  popoverEl.style.display = "initial";
+
+};
+
+canvas.onmouseleave = function() {
+  popoverEl.style.display = "none";
+};
+canvas.onmouseenter = function() {
+  popoverEl.style.display = "initial";
+};
+
+
+</script>
